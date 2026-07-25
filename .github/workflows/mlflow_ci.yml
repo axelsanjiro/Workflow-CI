@@ -3,15 +3,14 @@ name: MLflow CI and Docker Build
 on:
   push:
     branches: [main]
-    paths:
-      - "Workflow-CI/MLProject/**"
 
 jobs:
   run-mlflow-project:
     runs-on: ubuntu-latest
+
     defaults:
       run:
-        working-directory: Workflow-CI/MLProject
+        working-directory: MLProject
 
     steps:
       - name: Checkout Code
@@ -27,19 +26,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install mlflow pandas scikit-learn
 
-      - name: Run MLflow Project
+      - name: Run MLflow Project (Retraining)
         run: |
-          # Menggunakan env-manager local agar lebih cepat di GitHub Actions
           mlflow run . --env-manager=local
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          # Rahasia ini nantinya dikonfigurasi di menu Settings > Secrets GitHub Anda
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Simulate Docker Build & Push
+      - name: Docker Build and Push
         run: |
           echo "FROM python:3.9-slim" > Dockerfile
           echo "COPY . /app" >> Dockerfile
@@ -47,8 +44,5 @@ jobs:
           echo "RUN pip install mlflow pandas scikit-learn" >> Dockerfile
           echo "CMD [\"python\", \"modelling.py\"]" >> Dockerfile
 
-          # Build image
           docker build -t ${{ secrets.DOCKER_USERNAME }}/titanic-model:latest .
-
-          # Push image
           docker push ${{ secrets.DOCKER_USERNAME }}/titanic-model:latest
